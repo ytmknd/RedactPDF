@@ -9,6 +9,11 @@ import { generateSecureMaskedPdf } from "./utils/pdfRedactor";
 import { loadPdfDocument } from "./utils/pdfRenderer";
 import "./App.css";
 
+const BASE_VIEWER_WIDTH_PX = 1000;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.25;
+
 function getSafeFileName(name: string): string {
   const dotIndex = name.lastIndexOf(".");
   if (dotIndex < 1) {
@@ -17,12 +22,17 @@ function getSafeFileName(name: string): string {
   return `${name.slice(0, dotIndex)}_safe_masked.pdf`;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 function App() {
   const messages = useMemo(() => getMessages(), []);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [fileName, setFileName] = useState<string>("output_safe_masked.pdf");
   const [masksByPage, setMasksByPage] = useState<MasksByPage>({});
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [zoomScale, setZoomScale] = useState(1);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [isRenderingPage, setIsRenderingPage] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -31,6 +41,8 @@ function App() {
   const [renderErrorMessage, setRenderErrorMessage] = useState<string>("");
 
   const totalPages = pdfDoc?.numPages ?? 0;
+  const zoomPercent = Math.round(zoomScale * 100);
+  const viewerWidthPx = Math.round(BASE_VIEWER_WIDTH_PX * zoomScale);
 
   const currentPageMasks = useMemo(() => masksByPage[currentPageIndex] ?? [], [masksByPage, currentPageIndex]);
 
@@ -47,6 +59,7 @@ function App() {
       setPdfDoc(loadedPdf);
       setMasksByPage({});
       setCurrentPageIndex(0);
+      setZoomScale(1);
       setFileName(getSafeFileName(file.name));
     } catch (error) {
       const message = error instanceof Error ? error.message : messages.errors.loadPdfFallback;
@@ -80,6 +93,14 @@ function App() {
         [currentPageIndex]: trimmed,
       };
     });
+  };
+
+  const changeZoom = (delta: number) => {
+    setZoomScale((prev) => clamp(Number((prev + delta).toFixed(2)), MIN_ZOOM, MAX_ZOOM));
+  };
+
+  const resetZoom = () => {
+    setZoomScale(1);
   };
 
   const handleGenerate = async () => {
@@ -155,6 +176,35 @@ function App() {
           nextLabel={messages.pageControls.next}
         />
 
+        <div className="zoom-controls" role="group" aria-label="Zoom controls">
+          <button
+            type="button"
+            onClick={() => changeZoom(-ZOOM_STEP)}
+            disabled={!pdfDoc || isLoadingPdf || isGenerating || zoomScale <= MIN_ZOOM}
+            aria-label="Zoom out"
+          >
+            -
+          </button>
+          <button
+            type="button"
+            className="zoom-value"
+            onClick={resetZoom}
+            disabled={!pdfDoc || isLoadingPdf || isGenerating || zoomScale === 1}
+            aria-label="Reset zoom"
+            title="Reset zoom"
+          >
+            {zoomPercent}%
+          </button>
+          <button
+            type="button"
+            onClick={() => changeZoom(ZOOM_STEP)}
+            disabled={!pdfDoc || isLoadingPdf || isGenerating || zoomScale >= MAX_ZOOM}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+        </div>
+
         <div className="action-row">
           <button
             type="button"
@@ -182,7 +232,7 @@ function App() {
             pdfDoc={pdfDoc}
             pageIndex={currentPageIndex}
             masks={currentPageMasks}
-            maxWidthPx={1000}
+            maxWidthPx={viewerWidthPx}
             disabled={isGenerating}
             onAddMask={addMaskForCurrentPage}
             onRenderStateChange={setIsRenderingPage}

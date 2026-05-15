@@ -72,6 +72,21 @@
   font-weight: 700;
 }
 
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.zoom-controls button {
+  min-width: 42px;
+}
+
+.zoom-controls .zoom-value {
+  min-width: 72px;
+}
+
 .action-row {
   display: flex;
   gap: 8px;
@@ -121,13 +136,11 @@ button:disabled {
 .pdf-editor {
   position: relative;
   display: inline-block;
-  max-width: 100%;
 }
 
 .pdf-canvas,
 .overlay-canvas {
   display: block;
-  max-width: 100%;
   border-radius: 10px;
   border: 1px solid #c9d6e2;
 }
