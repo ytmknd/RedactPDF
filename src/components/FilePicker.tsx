@@ -1,12 +1,13 @@
 type FilePickerProps = {
   onPickFile: (file: File) => void;
   disabled?: boolean;
+  label: string;
 };
 
-export function FilePicker({ onPickFile, disabled = false }: FilePickerProps) {
+export function FilePicker({ onPickFile, disabled = false, label }: FilePickerProps) {
   return (
     <label className="file-picker" htmlFor="pdf-file-input">
-      <span className="file-picker-label">PDFファイルを選択</span>
+      <span className="file-picker-label">{label}</span>
       <input
         id="pdf-file-input"
         type="file"

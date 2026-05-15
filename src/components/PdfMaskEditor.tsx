@@ -20,6 +20,10 @@ type PdfMaskEditorProps = {
   onRenderStateChange?: (isRendering: boolean) => void;
   onPageInfo?: (info: RenderedPageInfo) => void;
   onRenderError?: (message: string) => void;
+  ariaLabel: string;
+  loadingMessage: string;
+  sizeLabel: string;
+  renderFailedFallback: string;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -57,6 +61,10 @@ export function PdfMaskEditor({
   onRenderStateChange,
   onPageInfo,
   onRenderError,
+  ariaLabel,
+  loadingMessage,
+  sizeLabel,
+  renderFailedFallback,
 }: PdfMaskEditorProps) {
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -111,7 +119,7 @@ export function PdfMaskEditor({
 
         if (!cancelled) {
           setRenderInfo(null);
-          const message = error instanceof Error ? error.message : "ページ描画に失敗しました。";
+          const message = error instanceof Error ? error.message : renderFailedFallback;
           onRenderError?.(message);
         }
       } finally {
@@ -127,7 +135,15 @@ export function PdfMaskEditor({
       cancelled = true;
       abortController.abort();
     };
-  }, [maxWidthPx, onPageInfo, onRenderError, onRenderStateChange, pageIndex, pdfDoc]);
+  }, [
+    maxWidthPx,
+    onPageInfo,
+    onRenderError,
+    onRenderStateChange,
+    pageIndex,
+    pdfDoc,
+    renderFailedFallback,
+  ]);
 
   useEffect(() => {
     const overlayCanvas = overlayCanvasRef.current;
@@ -244,7 +260,7 @@ export function PdfMaskEditor({
   };
 
   return (
-    <div className="pdf-editor" aria-label="PDFページ編集エリア">
+    <div className="pdf-editor" aria-label={ariaLabel}>
       <canvas ref={baseCanvasRef} className="pdf-canvas" />
       <canvas
         ref={overlayCanvasRef}
@@ -254,10 +270,10 @@ export function PdfMaskEditor({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
       />
-      {!renderInfo && <div className="editor-placeholder">PDFページを表示中...</div>}
+      {!renderInfo && <div className="editor-placeholder">{loadingMessage}</div>}
       {renderInfo && (
         <div className="canvas-size-note">
-          表示サイズ: {canvasSize.width} x {canvasSize.height}px
+          {sizeLabel}: {canvasSize.width} x {canvasSize.height}px
         </div>
       )}
     </div>

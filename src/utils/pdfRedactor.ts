@@ -37,7 +37,7 @@ export async function generateSecureMaskedPdf(params: GenerateParams): Promise<U
 
     const ctx = outputCanvas.getContext("2d");
     if (!ctx) {
-      throw new Error("出力用Canvasの初期化に失敗しました。");
+      throw new Error("Failed to initialize output canvas.");
     }
 
     ctx.save();

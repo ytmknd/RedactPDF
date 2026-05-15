@@ -4,6 +4,9 @@ type PageControlsProps = {
   onPrev: () => void;
   onNext: () => void;
   disabled?: boolean;
+  ariaLabel: string;
+  prevLabel: string;
+  nextLabel: string;
 };
 
 export function PageControls({
@@ -12,20 +15,23 @@ export function PageControls({
   onPrev,
   onNext,
   disabled = false,
+  ariaLabel,
+  prevLabel,
+  nextLabel,
 }: PageControlsProps) {
   const isFirst = currentPage <= 1;
   const isLast = currentPage >= totalPages;
 
   return (
-    <div className="page-controls" role="group" aria-label="ページ操作">
+    <div className="page-controls" role="group" aria-label={ariaLabel}>
       <button type="button" onClick={onPrev} disabled={disabled || isFirst}>
-        前へ
+        {prevLabel}
       </button>
       <span className="page-indicator">
         {currentPage} / {Math.max(totalPages, 1)}
       </span>
       <button type="button" onClick={onNext} disabled={disabled || isLast}>
-        次へ
+        {nextLabel}
       </button>
     </div>
   );

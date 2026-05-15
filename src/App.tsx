@@ -3,6 +3,7 @@ import type { PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { FilePicker } from "./components/FilePicker";
 import { PageControls } from "./components/PageControls";
 import { PdfMaskEditor } from "./components/PdfMaskEditor";
+import { getMessages } from "./i18n/messages";
 import type { NormalizedMaskRect, MasksByPage } from "./types/pdf";
 import { generateSecureMaskedPdf } from "./utils/pdfRedactor";
 import { loadPdfDocument } from "./utils/pdfRenderer";
@@ -17,6 +18,7 @@ function getSafeFileName(name: string): string {
 }
 
 function App() {
+  const messages = useMemo(() => getMessages(), []);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [fileName, setFileName] = useState<string>("output_safe_masked.pdf");
   const [masksByPage, setMasksByPage] = useState<MasksByPage>({});
@@ -47,8 +49,8 @@ function App() {
       setCurrentPageIndex(0);
       setFileName(getSafeFileName(file.name));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "PDFの読み込みに失敗しました。";
-      setErrorMessage(`PDF読み込みエラー: ${message}`);
+      const message = error instanceof Error ? error.message : messages.errors.loadPdfFallback;
+      setErrorMessage(`${messages.errors.loadPdfPrefix}: ${message}`);
       setPdfDoc(null);
     } finally {
       setIsLoadingPdf(false);
@@ -87,7 +89,7 @@ function App() {
 
     setErrorMessage("");
     setIsGenerating(true);
-    setProgressText("安全な黒塗りPDFを生成中...");
+    setProgressText(messages.generatingProgress);
 
     try {
       const outputBytes = await generateSecureMaskedPdf({
@@ -95,7 +97,7 @@ function App() {
         masksByPage,
         outputScale: 2,
         onProgress: (done, total) => {
-          setProgressText(`安全な黒塗りPDFを生成中... ${done}/${total}ページ`);
+          setProgressText(messages.generatingProgressWithCount(done, total));
         },
       });
 
@@ -109,10 +111,10 @@ function App() {
       link.click();
 
       URL.revokeObjectURL(url);
-      setProgressText("生成が完了しました。ダウンロードを開始しました。");
+      setProgressText(messages.generationCompleted);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "PDF生成に失敗しました。";
-      setErrorMessage(`PDF生成エラー: ${message}`);
+      const message = error instanceof Error ? error.message : messages.errors.generatePdfFallback;
+      setErrorMessage(`${messages.errors.generatePdfPrefix}: ${message}`);
       setProgressText("");
     } finally {
       setIsGenerating(false);
@@ -123,16 +125,22 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <h1>RedactPDF</h1>
-        <p>
-          PDFを安全に黒塗りします。黒塗り部分は出力PDFから復元できないよう画像化して再生成します。
-        </p>
+        <p>{messages.appDescription}</p>
       </header>
 
       <section className="panel">
-        <FilePicker onPickFile={handlePickFile} disabled={isLoadingPdf || isGenerating} />
-        {isLoadingPdf && <p className="status">PDFを読み込み中です...</p>}
+        <FilePicker
+          onPickFile={handlePickFile}
+          disabled={isLoadingPdf || isGenerating}
+          label={messages.filePickerLabel}
+        />
+        {isLoadingPdf && <p className="status">{messages.loadingPdf}</p>}
         {errorMessage && <p className="error">{errorMessage}</p>}
-        {renderErrorMessage && <p className="error">ページ描画エラー: {renderErrorMessage}</p>}
+        {renderErrorMessage && (
+          <p className="error">
+            {messages.renderErrorPrefix}: {renderErrorMessage}
+          </p>
+        )}
       </section>
 
       <section className="panel controls-panel">
@@ -142,6 +150,9 @@ function App() {
           onPrev={() => setCurrentPageIndex((prev) => Math.max(0, prev - 1))}
           onNext={() => setCurrentPageIndex((prev) => Math.min(totalPages - 1, prev + 1))}
           disabled={!pdfDoc || isLoadingPdf || isGenerating}
+          ariaLabel={messages.pageControls.ariaLabel}
+          prevLabel={messages.pageControls.previous}
+          nextLabel={messages.pageControls.next}
         />
 
         <div className="action-row">
@@ -150,7 +161,7 @@ function App() {
             onClick={handleUndoLastMask}
             disabled={!pdfDoc || currentPageMasks.length === 0 || isGenerating}
           >
-            最後のマスクを取り消す
+            {messages.undoLastMask}
           </button>
           <button
             type="button"
@@ -158,14 +169,14 @@ function App() {
             onClick={handleGenerate}
             disabled={!pdfDoc || isLoadingPdf || isRenderingPage || isGenerating}
           >
-            安全な黒塗りPDFをダウンロード
+            {messages.downloadRedactedPdf}
           </button>
         </div>
         {progressText && <p className="status">{progressText}</p>}
       </section>
 
       <section className="panel viewer-panel">
-        {!pdfDoc && <p className="status">PDFを選択するとここにページが表示されます。</p>}
+        {!pdfDoc && <p className="status">{messages.viewerPlaceholder}</p>}
         {pdfDoc && (
           <PdfMaskEditor
             pdfDoc={pdfDoc}
@@ -176,6 +187,10 @@ function App() {
             onAddMask={addMaskForCurrentPage}
             onRenderStateChange={setIsRenderingPage}
             onRenderError={setRenderErrorMessage}
+            ariaLabel={messages.editor.ariaLabel}
+            loadingMessage={messages.editor.loadingPage}
+            sizeLabel={messages.editor.sizeLabel}
+            renderFailedFallback={messages.editor.renderFailedFallback}
           />
         )}
       </section>
